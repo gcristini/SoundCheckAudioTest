@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 
+import sys
+import subprocess
+from distutils.util import strtobool
+
+from soundcheck_tcpip.soundcheck.installation import construct_installation
+from Soundcheck.util import configure_ini_for_automation, get_sc_root, construct_controller, get_standard_sequence_dir, is_calibration_curve
+import socket
+
 from Libraries.Enums import Enums as en
+from Libraries.ParseXml import XmlDictConfig
+from Libraries.Timer import Timer
+from xml.etree import ElementTree
+
+from Scripts.SealingTest import SealingTest
+from Scripts.FrequencyResponseTest import FrequencyResponseTest
 
 
 class Main(object):
@@ -11,6 +25,24 @@ class Main(object):
     # ************************************************* #
     def __init__(self):
         """ Constructor """
+        self._main_config_dict: dict
+
+        self._soundcheck_struct = {
+            'installation': "",
+            'ini_file': None,
+            'construct_controller': None
+        }
+
+        self._test_list_dict = {
+            'sealing_test': {
+                'script': None,
+                'run': False,
+            },
+            'frequency_response': {
+                'script': None,
+                'run': False,
+            }       
+        }
 
         # State Machine
         self._main_state_fun_dict = {
@@ -34,38 +66,123 @@ class Main(object):
         """"""
         pass
 
+    def _parse_config_file(self):
+        """"""
+        self._main_config_dict = XmlDictConfig(ElementTree.parse('Config.xml').getroot())
+        
+        return
+
     # ------------------ STATE MACHINE ------------------ #
     def _go_to_next_state(self, state):
         """"""
         # Store last state
-        self._last_main_state = self._main_state
+        self._store_last_state()
 
         # Go to next state
         self._main_state = state
-        pass
+        return
+
+    def _store_last_state(self):
+        self._last_main_state = self._main_state
+        return
 
     def _init_state_manager(self):
         """"""
-        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN)
+        # Parse config file 
+        self._parse_config_file()
+
+        # Populate list of test
+        self._test_list_dict['sealing_test']['script'] = SealingTest()
+        self._test_list_dict['sealing_test']['run'] = bool(strtobool(self._main_config_dict['TestList']['sealing_test']))
+                
+        self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest()
+        self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
+
+        # Got to Open SoundCheck state
+        #self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN) #TODO
+        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)
+
         return
 
     def _sc_open_state_manager(self):
         """"""
-        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)        
+        self._soundcheck_struct['installation'] = construct_installation([18, 0], self._main_config_dict['Soundcheck']['root_dir'])        
+        self._soundcheck_struct['ini_file'] = configure_ini_for_automation(self._soundcheck_struct['installation'])
+        self._soundcheck_struct['construct_controller'] = construct_controller(self._soundcheck_struct['installation'])
+
+        try:
+            print("Launching SoundCheck...")
+            self._soundcheck_struct['construct_controller'].launch(timeout=60)
+            self._soundcheck_struct['construct_controller'].set_lot_number("1234")
+        except socket.timeout:
+            print("Socket timed out...exiting...")
+
+            # Go to stop state
+            self._go_to_next_state(en.MainStateEnum.MAIN_STATE_STOP)
+        else: 
+            # Go to ADB connect state
+            self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)        
+
         return
 
     def _adb_connect_state_manager(self):
         """"""
+        count = 0
+        res = -1
+        num_of_try = 60
+
+        # Start Timer
+        timer = Timer()
+        timer.start()
+
+        while (count < num_of_try):
+            if timer.elapsed_time_s(2) >= 1:
+                print("- Waiting for SX5 device " + "."*count, end='\r')
+                
+                # Run fake command to know if adb shell works
+                res = subprocess.run("adb shell date", text=True, capture_output=True)     
+                
+                if res.stdout:
+                    timer.stop()
+                    break
+                else:
+                    timer.reset()
+
+                count += 1
+        
+        if not res.stdout:            
+            sys.stdout.write("\033[K")
+            print("No Device Found", end="\r")            
+
+        else:
+            sys.stdout.write("\033[K")
+            print ("SX5 Found", end = "\r")               
+        
+        # Go to Open Record App State
         self._go_to_next_state(en.MainStateEnum.MAIN_STATE_RECORDER_APP_OPEN)
+        
         return
 
     def _recorder_app_state_manager(self):
         """"""
+        easyvoicerecorder_activity_name = "com.digipom.easyvoicerecorder.pro/com.digipom.easyvoicerecorder.ui.activity.EasyVoiceRecorderActivity"
+
+        print ('Opening "EasyVoiceRecorder" app on the device')
+        subprocess.run(f"adb shell am start -n {easyvoicerecorder_activity_name}", text=True, capture_output=True)
+
+        # Go to Run Test
         self._go_to_next_state(en.MainStateEnum.MAIN_STATE_RUN_TEST)
         return
 
     def _run_test_state_manager(self):
         """"""
+        # Run Selected Test
+        for test in self._test_list_dict.keys():
+            if self._test_list_dict[test]['run']:
+                self._test_list_dict[test]['script'].init()
+                self._test_list_dict[test]['script'].run()           
+
+        # Go to stop state
         self._go_to_next_state(en.MainStateEnum.MAIN_STATE_STOP)
         return
 
@@ -73,7 +190,6 @@ class Main(object):
         """"""        
         return
     
-
     def _main_state_machine_manager(self):
         """"""
         # Get function from dictionary
@@ -105,15 +221,13 @@ class Main(object):
                    self._last_main_state == en.MainStateEnum.MAIN_STATE_STOP):
 
             # Store the last state machine state
-            self._last_main_state = self._main_state
+            self._store_last_state()
 
             # Run state machine at current state
             self._main_state_machine_manager()
 
 
-
-
-if __name__ == "__main__":
+if __name__ == "__main__":    
     test = Main()
     test.init()
     test.run()
