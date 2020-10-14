@@ -6,9 +6,12 @@ class FrequencyResponseTest(object):
     # ************************************************* #
     # **************** Private Methods **************** #
     # ************************************************* #
-    def __init__(self):
+    def __init__(self, storage_folder=""):
         """ Constructor """
+
+        self._main_storage_folder=storage_folder
         
+        pass
        
     # ---------------------------------------------------------------- #
     # ----------------------- Private Methods ------------------------ #

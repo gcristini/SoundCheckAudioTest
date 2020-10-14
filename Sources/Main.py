@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import subprocess
+import time
 from distutils.util import strtobool
 
 from soundcheck_tcpip.soundcheck.installation import construct_installation
@@ -10,8 +12,9 @@ import socket
 
 from Libraries.Enums import Enums as en
 from Libraries.ParseXml import XmlDictConfig
-from Libraries.Timer import Timer
 from xml.etree import ElementTree
+
+from Libraries.Timer import Timer
 
 from Scripts.SealingTest import SealingTest
 from Scripts.FrequencyResponseTest import FrequencyResponseTest
@@ -26,8 +29,11 @@ class Main(object):
     def __init__(self):
         """ Constructor """
         self._main_config_dict: dict
+        
+        self._main_storage_folder = ""
 
         self._soundcheck_struct = {
+            'root_directory': "",
             'installation': "",
             'ini_file': None,
             'construct_controller': None
@@ -88,25 +94,30 @@ class Main(object):
 
     def _init_state_manager(self):
         """"""
-        # Parse config file 
-        self._parse_config_file()
+       
+        # Create storage folder  
+        date = time.strftime("%d%m_%H%M_%S")
+        self._main_storage_folder = f"{os.getcwd()}/{self._main_config_dict['General']['storage_folder']}_{date}"
+        os.mkdir(self._main_storage_folder)
 
         # Populate list of test
-        self._test_list_dict['sealing_test']['script'] = SealingTest()
+        self._test_list_dict['sealing_test']['script'] = SealingTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
         self._test_list_dict['sealing_test']['run'] = bool(strtobool(self._main_config_dict['TestList']['sealing_test']))
                 
-        self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest()
-        self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
+        #self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
+        #self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
+                       
 
         # Got to Open SoundCheck state
-        #self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN) #TODO
-        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)
+        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN) #TODO
+        #self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)
 
         return
 
     def _sc_open_state_manager(self):
         """"""
-        self._soundcheck_struct['installation'] = construct_installation([18, 0], self._main_config_dict['Soundcheck']['root_dir'])        
+        self._soundcheck_struct['root_directory'] = self._main_config_dict['Soundcheck']['root_dir']
+        self._soundcheck_struct['installation'] = construct_installation([18, 0], self._soundcheck_struct['root_directory'])        
         self._soundcheck_struct['ini_file'] = configure_ini_for_automation(self._soundcheck_struct['installation'])
         self._soundcheck_struct['construct_controller'] = construct_controller(self._soundcheck_struct['installation'])
 
@@ -194,10 +205,11 @@ class Main(object):
         """"""
         # Get function from dictionary
         fun = self._main_state_fun_dict.get(self._main_state)
+
         # Execute function
         fun()
 
-        pass
+        return
 
     # ************************************************ #
     # **************** Public Methods **************** #
@@ -206,6 +218,9 @@ class Main(object):
     def init(self):
         # Initialize Colorama library
         #cm.init(autoreset=True)
+
+        # Parse config file 
+        self._parse_config_file()
         
         self._main_state = en.MainStateEnum.MAIN_STATE_INIT
         self._last_main_state = en.MainStateEnum.MAIN_STATE_INIT

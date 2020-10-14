@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Body -->
 <GlobalParams>
+
+    <General>
+        <storage_folder>Test</storage_folder>
+        <device_name>DVT2_14607</device_name>
+    </General>
+
     <Soundcheck>
        <root_dir>C:\Program Files\SoundCheck 18</root_dir>
     </Soundcheck>
