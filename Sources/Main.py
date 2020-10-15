@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 from distutils.util import strtobool
+import colorama as cm
 
 from soundcheck_tcpip.soundcheck.installation import construct_installation
 from Soundcheck.util import configure_ini_for_automation, get_sc_root, construct_controller, get_standard_sequence_dir, is_calibration_curve
@@ -94,23 +95,26 @@ class Main(object):
 
     def _init_state_manager(self):
         """"""
-       
-        # Create storage folder  
+        print(cm.Fore.MAGENTA + " ------------------------------------------------------------ ")
+        print(cm.Fore.MAGENTA + " ------------- WELCOME TO SOUNDCHECK AUDIO TEST! ------------ ")
+        print(cm.Fore.MAGENTA + " ------------------------------------------------------------ ")
+
+        input ("- Please press enter to start...")
+
+        # Initialize storage folder name
         date = time.strftime("%d%m_%H%M_%S")
-        self._main_storage_folder = f"{os.getcwd()}/{self._main_config_dict['General']['storage_folder']}_{date}"
-        os.mkdir(self._main_storage_folder)
+        self._main_storage_folder = f"{os.getcwd()}/{self._main_config_dict['General']['storage_folder']}_{date}"        
 
         # Populate list of test
         self._test_list_dict['sealing_test']['script'] = SealingTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
         self._test_list_dict['sealing_test']['run'] = bool(strtobool(self._main_config_dict['TestList']['sealing_test']))
                 
-        #self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
-        #self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
+        self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
+        self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
                        
 
         # Got to Open SoundCheck state
-        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN) #TODO
-        #self._go_to_next_state(en.MainStateEnum.MAIN_STATE_ADB_CONNECT)
+        self._go_to_next_state(en.MainStateEnum.MAIN_STATE_SC_OPEN)
 
         return
 
@@ -187,6 +191,9 @@ class Main(object):
 
     def _run_test_state_manager(self):
         """"""
+        # Create main storage folder
+        os.mkdir(self._main_storage_folder)
+
         # Run Selected Test
         for test in self._test_list_dict.keys():
             if self._test_list_dict[test]['run']:
@@ -217,7 +224,7 @@ class Main(object):
 
     def init(self):
         # Initialize Colorama library
-        #cm.init(autoreset=True)
+        cm.init(autoreset=True)
 
         # Parse config file 
         self._parse_config_file()

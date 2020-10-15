@@ -24,12 +24,26 @@ class Enums:
 
     class SealingTestEnum:
         ST_TEST_STATE_INIT = "init"
-        ST_TEST_STATE_RUN_UMT = "run_sequence_unmuted"
-        ST_TEST_STATE_ADB_PULL = "adb_pull"
+        ST_TEST_STATE_RUN_UMT = "run_sequence_unmuted"        
         ST_TEST_STATE_RUN_MT = "run_sequence_muted"
         ST_TEST_STATE_ANALYZE = "analyze_sequences"
         ST_TEST_STATE_STOP = "stop"
         ST_TEST_STATE_EXIT = "exit"
+
+        @classmethod
+        def vars(cls):
+            return [name for name, value in vars(cls).items() if name.isupper()]
+
+        @classmethod
+        def values(cls):
+            return [value for name, value in vars(cls).items() if name.isupper()]
+
+    class FrequencyResponseTestEnum:
+        FR_TEST_STATE_INIT = "init"
+        FR_TEST_STATE_RUN_SEQ = "run_sequence"        
+        FR_TEST_STATE_ANALYZE_DATA = "analyze_data"        
+        FR_TEST_STATE_STOP = "stop"
+        FR_TEST_STATE_EXIT = "exit"
 
         @classmethod
         def vars(cls):
