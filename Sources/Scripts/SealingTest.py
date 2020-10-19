@@ -20,9 +20,10 @@ class SealingTest(object):
     # ************************************************* #
     # **************** Private Methods **************** #
     # ************************************************* #
-    def __init__(self, soundcheck_struct: dict, storage_folder = ""):
+    def __init__(self, soundcheck_struct: dict, device_name = "", storage_folder = ""):
         """ Constructor """
-        self._main_storage_folder=storage_folder
+        self._device_name = device_name
+        self._main_storage_folder = storage_folder
         self._sealing_storage_folder = ""
         self._wave_file_name = {
             "Muted": "",
@@ -79,8 +80,8 @@ class SealingTest(object):
         self._sealing_storage_folder = f"{self._main_storage_folder}/SealingTest"
         os.mkdir(self._sealing_storage_folder)
 
-        self._wave_file_name["Muted"] = f'[Muted] {self._sealing_config_dict["General"]["device_name"]}_ST.wav'
-        self._wave_file_name["Unmuted"] = f'[Unmuted] {self._sealing_config_dict["General"]["device_name"]}_ST.wav'
+        self._wave_file_name["Muted"] = f'[Muted] {self._device_name}_ST.wav'
+        self._wave_file_name["Unmuted"] = f'[Unmuted] {self._device_name}_ST.wav'
 
         # Open sequence                
         self._soundcheck_struct['construct_controller'].open_sequence(f'{self._soundcheck_struct["root_directory"]}\\Sequences\\Microphones\\SealingTest_WhiteNoise.sqc', timeout=60)
@@ -100,12 +101,12 @@ class SealingTest(object):
         self._soundcheck_struct['construct_controller'].run_sequence()
         
         # Get the recorded wav file and pull it 
-        input_wav_filename=subprocess.run("adb shell ls /storage/emulated/0/EasyVoiceRecorder/", text=True, capture_output=True).stdout.strip('\n\r')            
+        input_wav_filename = subprocess.run("adb shell ls /storage/emulated/0/EasyVoiceRecorder/", text=True, capture_output=True).stdout.strip('\n\r')            
         output_wav_filename = self._wave_file_name["Unmuted"]
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._sealing_storage_folder}/{output_wav_filename}"', text=True, stdout=False)
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True,  stdout=False) 
 
-        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with unmuted microphone\t\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
+        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with unmuted microphone\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
 
         # Go to run muted test state
         self._go_to_next_state(en.SealingTestEnum.ST_TEST_STATE_RUN_MT)
@@ -132,7 +133,7 @@ class SealingTest(object):
 
     def _analyze_state_manager(self):
         """"""
-        print (cm.Fore.CYAN + cm.Style.DIM + "- Calulate track's RMS and sealing:")        
+        print (cm.Fore.CYAN + cm.Style.DIM + "- Calculate track's RMS and sealing:")        
         bit_depth = (2**15) # Track audio are 16-bit signed, so the max value is (2**16)/2
 
         # Calculate RMS of unmuted track
@@ -152,10 +153,13 @@ class SealingTest(object):
                     f'\tSealing: {sealing_RMS_dbFS} dbFS'
 
         print (cm.Fore.CYAN + cm.Style.DIM + log_text)
-        
-        file = open(f"{self._sealing_storage_folder}/SealingTest.log", "w")
+
+        log_path = f"{self._sealing_storage_folder}/SealingTest.log"
+        file = open(log_path, "w")
         file.write(log_text)
         file.close()
+
+        print (cm.Fore.CYAN + cm.Style.DIM + f'\n-- Log file saved in {log_path}')
 
         # Go to stop state
         self._go_to_next_state(en.SealingTestEnum.ST_TEST_STATE_STOP)

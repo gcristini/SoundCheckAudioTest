@@ -32,6 +32,7 @@ class Main(object):
         self._main_config_dict: dict
         
         self._main_storage_folder = ""
+        self._device_name = ""
 
         self._soundcheck_struct = {
             'root_directory': "",
@@ -99,17 +100,31 @@ class Main(object):
         print(cm.Fore.MAGENTA + " ------------- WELCOME TO SOUNDCHECK AUDIO TEST! ------------ ")
         print(cm.Fore.MAGENTA + " ------------------------------------------------------------ ")
 
+        self._device_name = input ("- Please scan barcode or enter the device name: ")
         input ("- Please press enter to start...")
 
         # Initialize storage folder name
-        date = time.strftime("%d%m_%H%M_%S")
-        self._main_storage_folder = f"{os.getcwd()}/{self._main_config_dict['General']['storage_folder']}_{date}"        
+        #date = time.strftime("%d%m_%H%M_%S")
+        self._main_storage_folder = f"{os.getcwd()}/{self._device_name}"
+
+        # If directoy exist add _n to the of name
+        if os.path.isdir(self._main_storage_folder):
+            for n in range (1, 999):            
+                new_storage_folder = f'{self._main_storage_folder}_{n}'
+                if not os.path.isdir(new_storage_folder):
+                    self._main_storage_folder = new_storage_folder
+                    break
+                                  
 
         # Populate list of test
-        self._test_list_dict['sealing_test']['script'] = SealingTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
+        self._test_list_dict['sealing_test']['script'] = SealingTest(   soundcheck_struct=self._soundcheck_struct, 
+                                                                        device_name=self._device_name,
+                                                                        storage_folder=self._main_storage_folder)
         self._test_list_dict['sealing_test']['run'] = bool(strtobool(self._main_config_dict['TestList']['sealing_test']))
                 
-        self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest(soundcheck_struct=self._soundcheck_struct, storage_folder=self._main_storage_folder)
+        self._test_list_dict['frequency_response']['script'] = FrequencyResponseTest(   soundcheck_struct=self._soundcheck_struct, 
+                                                                                        device_name=self._device_name,
+                                                                                        storage_folder=self._main_storage_folder)
         self._test_list_dict['frequency_response']['run'] = bool(strtobool(self._main_config_dict['TestList']['frequency_response_test']))
                        
 

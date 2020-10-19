@@ -18,8 +18,9 @@ class FrequencyResponseTest(object):
     # ************************************************* #
     # **************** Private Methods **************** #
     # ************************************************* #
-    def __init__(self, soundcheck_struct: dict, storage_folder=""):
+    def __init__(self, soundcheck_struct: dict, device_name = "", storage_folder=""):
         """ Constructor """
+        self._device_name = device_name
         self._main_storage_folder = storage_folder
         self._frequency_response_storage_folder: str
         self._wave_file_name: str
@@ -50,6 +51,16 @@ class FrequencyResponseTest(object):
         """"""
         pass
 
+    @staticmethod
+    def _bool2result(var):
+        result = ""
+        if var == True:
+            result = "Passed"
+        elif var == False:
+            result = "Failed"
+
+        return result
+
     def _parse_config_file(self):
         """"""
         self._frequency_response_config_dict = XmlDictConfig(ElementTree.parse('Config.xml').getroot())
@@ -77,7 +88,7 @@ class FrequencyResponseTest(object):
         self._frequency_response_storage_folder = f"{self._main_storage_folder}/FrequencyResponseTest"
         os.mkdir(self._frequency_response_storage_folder)
 
-        self._wave_file_name = f'{self._frequency_response_config_dict["General"]["device_name"]}_FRT.wav'
+        self._wave_file_name = f'{self._device_name}_FRT.wav'
 
         # Delete all files into "EasyVoiceRecorder" storage folder in SX5
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True, stdout=False)
@@ -98,8 +109,8 @@ class FrequencyResponseTest(object):
         input_wav_filename=subprocess.run("adb shell ls /storage/emulated/0/EasyVoiceRecorder/", text=True, capture_output=True).stdout.strip('\n\r')                  
         output_wav_filename=self._wave_file_name
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._frequency_response_storage_folder}/{output_wav_filename}"', text=True,  stdout=False)
-        subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True,  stdout=False)
-        print (cm.Fore.GREEN + cm.Style.DIM + f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
+        subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True, stdout=False)
+        #print (cm.Fore.GREEN + cm.Style.DIM + f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
         
         # Open and run the second step of sequence        
         self._soundcheck_struct['construct_controller'].open_sequence(f'{self._soundcheck_struct["root_directory"]}\\Sequences\\Microphones\\FrequencyResponse_150-10k_Step2.sqc', timeout=60)
@@ -112,14 +123,30 @@ class FrequencyResponseTest(object):
         return
     
     def _analyze_data_state_manager(self):
-        """"""
-        
+        """"""        
+        #print (self._soundcheck_struct['construct_controller'].get_memlist_names())
+        # Get data from Soundcheck's memory list 
         data = {
             'fundamental': self._soundcheck_struct['construct_controller'].get_curve("Fundamental"),
             'upper_limit': self._soundcheck_struct['construct_controller'].get_curve("Microphone Response Upper Limit"),
-            'lower_limit': self._soundcheck_struct['construct_controller'].get_curve("Microphone Response Lower Limit") 
-        }        
+            'lower_limit': self._soundcheck_struct['construct_controller'].get_curve("Microphone Response Lower Limit"),
+            'microhone_sensitivity_1khz': self._soundcheck_struct['construct_controller'].get_result('Microphone Sensitivity'),
+            'microhone_response': self._soundcheck_struct['construct_controller'].get_result('Microphone Response')
+        }     
+        print (cm.Fore.GREEN + cm.Style.DIM + '- Calculate Microphone sensitivity and response:')
 
+        log_text =  f'\t Microphone Sensitivity @1kHz: {data["microhone_sensitivity_1khz"]["Margin"]}dbFS \t {self._bool2result(data["microhone_sensitivity_1khz"]["Passed"])}\n'+\
+                    f'\t Microphone Response Margin: {data["microhone_response"]["Margin"]}dbFS \t\t {self._bool2result(data["microhone_response"]["Passed"])}'
+        print(cm.Fore.GREEN + cm.Style.DIM + log_text)
+
+        log_path = f'{self._frequency_response_storage_folder}/FrequencyResponseTest.log'
+        file = open (log_path, 'w')
+        file.write(log_text)
+        file.close()
+
+        print (cm.Fore.GREEN + cm.Style.DIM + f'\n-- Log file saved in {log_path}')
+
+        # Plot frequency response
         fig = plt.figure()
         ax=fig.add_subplot(1,1,1)
 
@@ -142,7 +169,11 @@ class FrequencyResponseTest(object):
         ax.set_yscale('Linear')
         ax.set_xscale('Log')
         #plt.show(block=False)
-        plt.savefig(f'{self._frequency_response_storage_folder}/FrequencyReponse.jpg')
+        fig_path = f'{self._frequency_response_storage_folder}/FrequencyReponse.jpg'
+        plt.savefig(fig_path)        
+
+        print (cm.Fore.GREEN + cm.Style.DIM + f'-- Frequency response plot saved in {fig_path}')
+        
 
         # Go to stop state
         self._go_to_next_state(en.FrequencyResponseTestEnum.FR_TEST_STATE_STOP)
