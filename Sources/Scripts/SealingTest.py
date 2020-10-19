@@ -105,7 +105,7 @@ class SealingTest(object):
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._sealing_storage_folder}/{output_wav_filename}"', text=True, stdout=False)
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True,  stdout=False) 
 
-        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with unmuted microphone\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
+        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with unmuted microphone\t\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
 
         # Go to run muted test state
         self._go_to_next_state(en.SealingTestEnum.ST_TEST_STATE_RUN_MT)
@@ -124,7 +124,7 @@ class SealingTest(object):
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._sealing_storage_folder}/{output_wav_filename}"', text=True,  stdout=False)
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True,  stdout=False)
         
-        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with muted microphone\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
+        print (cm.Fore.CYAN + cm.Style.DIM + "- Record with muted microphone\t\t" + cm.Fore.GREEN + cm.Style.DIM + "OK")
 
         # Go to run analyze state
         self._go_to_next_state(en.SealingTestEnum.ST_TEST_STATE_ANALYZE)
@@ -136,15 +136,15 @@ class SealingTest(object):
         bit_depth = (2**15) # Track audio are 16-bit signed, so the max value is (2**16)/2
 
         # Calculate RMS of unmuted track
-        data = wavfile.read(self._wave_file_name["Unmuted"])[1]
+        data = wavfile.read(f'{self._sealing_storage_folder}/{self._wave_file_name["Unmuted"]}')[1]
         unmuted_RMS_dbFS = np.round(10*np.log10(np.mean((data/bit_depth)**2)),2)        
 
         # Calculate RMS of Muted track
-        data = wavfile.read(self._wave_file_name["Muted"])[1]
+        data = wavfile.read(f'{self._sealing_storage_folder}/{self._wave_file_name["Muted"]}')[1]
         muted_RMS_dbFS = np.round(10*np.log10(np.mean((data/bit_depth)**2)),2)
         
         # Calculate sealing
-        sealing_RMS_dbFS = abs(unmuted_RMS_dbFS) - abs(muted_RMS_dbFS)
+        sealing_RMS_dbFS = np.round(abs(unmuted_RMS_dbFS) - abs(muted_RMS_dbFS),2)
         
         # Print and save log
         log_text =  f'\t{self._wave_file_name["Unmuted"]}: {unmuted_RMS_dbFS} dbFS\n' +\

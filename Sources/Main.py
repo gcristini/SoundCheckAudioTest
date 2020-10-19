@@ -206,6 +206,8 @@ class Main(object):
 
     def _stop_state_manager(self):
         """"""        
+        self._store_last_state()
+
         return
     
     def _main_state_machine_manager(self):
@@ -243,12 +245,11 @@ class Main(object):
                    self._last_main_state == en.MainStateEnum.MAIN_STATE_STOP):
 
             # Store the last state machine state
-            self._store_last_state()
+            #self._store_last_state()
 
             # Run state machine at current state
             self._main_state_machine_manager()
-
-
+      
 if __name__ == "__main__":    
     test = Main()
     test.init()

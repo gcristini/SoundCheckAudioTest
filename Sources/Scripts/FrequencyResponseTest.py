@@ -99,7 +99,7 @@ class FrequencyResponseTest(object):
         output_wav_filename=self._wave_file_name
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._frequency_response_storage_folder}/{output_wav_filename}"', text=True,  stdout=False)
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True,  stdout=False)
-        print (f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
+        print (cm.Fore.GREEN + cm.Style.DIM + f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
         
         # Open and run the second step of sequence        
         self._soundcheck_struct['construct_controller'].open_sequence(f'{self._soundcheck_struct["root_directory"]}\\Sequences\\Microphones\\FrequencyResponse_150-10k_Step2.sqc', timeout=60)
@@ -130,19 +130,19 @@ class FrequencyResponseTest(object):
         ax.grid()
         #fig.title("Fundamental")
 
-        # set limits based on data max/min, looks better than autoscale
+        # Set limits based on data max/min, looks better than autoscale
         ax.set_xlim(min(data['fundamental']["XData"]), max(data['fundamental']["XData"])+1000)
         ax.set_ylim(min(data['fundamental']["YData"])-20, max(data['fundamental']["YData"])+20)
 
-        # set axis labels
-        # TODO
-        #fig.set_ylabel(fundamental["YDataScale"])
-        #fig.set_xlabel(fundamental["XUnit"])
+        # Set axis labels
+        ax.set_ylabel(data['fundamental']["YDataScale"])
+        ax.set_xlabel(data['fundamental']["XUnit"])
 
         # set scale format
         ax.set_yscale('Linear')
         ax.set_xscale('Log')
-        plt.show(block=True)
+        #plt.show(block=False)
+        plt.savefig(f'{self._frequency_response_storage_folder}/FrequencyReponse.jpg')
 
         # Go to stop state
         self._go_to_next_state(en.FrequencyResponseTestEnum.FR_TEST_STATE_STOP)
@@ -190,7 +190,7 @@ class FrequencyResponseTest(object):
 
     def run(self):
         """ Frequency Response Test Application """
-        print (cm.Fore.CYAN + cm.Style.DIM + "\n**** RUN SEALING TEST ****")
+        print (cm.Fore.GREEN + cm.Style.DIM + "\n**** RUN FREQUENCY RESPONSE TEST ****")
 
         # Init
         self._init_state_manager()
@@ -203,5 +203,5 @@ class FrequencyResponseTest(object):
 
             # Run state machine at current state
             self._frequency_response_state_machine_manager()
-
+        
         return

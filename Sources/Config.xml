@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Body -->
 <GlobalParams>
-
     <General>
         <storage_folder>Test</storage_folder>
         <device_name>DVT2_14607</device_name>
@@ -12,7 +11,7 @@
     </Soundcheck>
 
     <TestList>
-        <sealing_test>true</sealing_test>
+        <sealing_test>false</sealing_test>
         <frequency_response_test>true</frequency_response_test>
     </TestList>
 </GlobalParams>
