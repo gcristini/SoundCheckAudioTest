@@ -1,5 +1,6 @@
 import os
 import subprocess
+import matplotlib.backends.backend_tkagg
 import matplotlib.pyplot as plt
 import colorama as cm
 
@@ -110,7 +111,7 @@ class FrequencyResponseTest(object):
         output_wav_filename=self._wave_file_name
         subprocess.run(f'adb pull "/storage/emulated/0/EasyVoiceRecorder/{input_wav_filename}" "{self._frequency_response_storage_folder}/{output_wav_filename}"', text=True,  stdout=False)
         subprocess.run("adb shell rm -f /storage/emulated/0/EasyVoiceRecorder/*", text=True, stdout=False)
-        #print (cm.Fore.GREEN + cm.Style.DIM + f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
+        print (cm.Fore.GREEN + cm.Style.DIM + f'-- Record saved in {self._frequency_response_storage_folder}/{output_wav_filename}')
         
         # Open and run the second step of sequence        
         self._soundcheck_struct['construct_controller'].open_sequence(f'{self._soundcheck_struct["root_directory"]}\\Sequences\\Microphones\\FrequencyResponse_150-10k_Step2.sqc', timeout=60)
